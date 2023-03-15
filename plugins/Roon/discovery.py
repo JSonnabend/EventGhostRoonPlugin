@@ -1,0 +1,101 @@
+"""
+Module defining a class to discover Roon servers.
+
+If multiple servers are available on the network, the first to be discovered
+is selected. This may not be the one you have enabled the plugin for.
+"""
+
+import os.path
+import socket
+import threading
+
+from soodmessage import FormatException, SOODMessage
+from constants import SOOD_PORT, SOOD_MULTICAST_IP, LOGGER
+
+
+class RoonDiscovery(threading.Thread):
+    """Class to discover Roon Servers connected in the network."""
+
+    # JS: 2023-02-06: change so that .soodmsg can be in a defnite location, otherwise compiled (PyInstaller) version can't find it
+    def __init__(self, core_id=None, sood_file_dir=None):
+        """Discover Roon Servers connected in the network."""
+        self._exit = threading.Event()
+        self._core_id = core_id
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.sood_file_dir = sood_file_dir
+
+    def run(self):
+        """Run discovery until server found."""
+        while not self._exit.isSet():
+            host, _ = self.first()
+            if host:
+                self.stop()
+
+    def stop(self):
+        """Stop scan."""
+        self._exit.set()
+
+    def all(self):
+        """Scan and return all found entries as a list. Each server is a tuple of host,port."""
+        return self._discover(first_only=False)
+
+    def first(self):
+        """Return first server that is found."""
+        all_servers = self._discover(first_only=True)
+        return all_servers[0] if all_servers else (None, None)
+
+    # pylint: disable=too-many-locals
+    def _discover(self, first_only=False):
+        """Update the server entry with details."""
+        # JS: 2023-02-06: change so that .soodmsg can be in a defnite location, otherwise compiled (PyInstaller) version can't find it
+        if self.sood_file_dir is None:
+            self.sood_file_dir = os.path.dirname(os.path.abspath(__file__))
+        sood_file = os.path.join(self.sood_file_dir, ".soodmsg")
+        print("sood_file: %s" % sood_file)
+        with open(sood_file) as sood_query_file:
+            msg = sood_query_file.read()
+            print(".soodmsg: %s" % msg)
+        msg = msg.encode()
+        entries = []
+
+
+        try:		
+        	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        
+	        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
+	        sock.sendto(msg, (SOOD_MULTICAST_IP, SOOD_PORT))
+	        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+	        sock.sendto(msg, ("<broadcast>", SOOD_PORT))
+	        sock.settimeout(5)
+	        while not self._exit.isSet():
+	            try:
+	                data, server = sock.recvfrom(1024)
+	                message = SOODMessage(data).as_dictionary
+	
+	                host = server[0]
+	                port = message["properties"]["http_port"]
+	                unique_id = message["properties"]["unique_id"]
+	                print("Discovered %s", message)
+	
+	                if self._core_id is not None and self._core_id != unique_id:
+	                    print(
+	                        "Ignoring server with id %s, because we're looking for %s",
+	                        unique_id,
+	                        self._core_id,
+	                    )
+	                    continue
+	
+	                entries.append((host, port))
+	                if first_only:
+	                    # we're only interested in the first server found
+	                    break
+	            except socket.timeout:
+	                print("Timeout")
+	                break
+	            except FormatException as format_exception:
+	                print("Format exception %s", format_exception.message)
+	                break
+        finally:
+	    	sock.close()
+        return entries
