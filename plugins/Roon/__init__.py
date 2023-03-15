@@ -23,6 +23,7 @@ help = '''\
 Roon plugin
 '''
 
+
 eg.RegisterPlugin(
     name = 'Roon',
     author = 'Sonnabend',
