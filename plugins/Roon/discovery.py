@@ -72,8 +72,6 @@ class RoonDiscovery(threading.Thread):
                     data, server = sock.recvfrom(1024)
                     print('data: ' + data)
                     message = SOODMessage(data).as_dictionary
-                    print('here!')
-
                     host = server[0]
                     port = message["properties"]["http_port"]
                     unique_id = message["properties"]["unique_id"]

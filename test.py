@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, './plugins/Roon')
 import roonapi
-import discovery
+import time
 
 _appinfo = {
     "extension_id": "sonnabend.roon.eventghostplugin",
@@ -29,25 +29,25 @@ def authorize(event):
     print(apis)
 
     auth_api = []
-    # while len(auth_api) == 0:
-    #     print("Waiting for authorisation")
-    #     time.sleep(1)
-    #     auth_api = [api for api in apis if api.token is not None]
-    #
-    # api = auth_api[0]
-    #
-    # print("Got authorisation\n\t\thost ip: {}\
-    #                   \n\t\tcore name: {}\n\t\tcore id: {}\
-    #                   \n\t\ttoken: {}".format(api.host, api.core_name, api.core_id, api.token))
-    # # This is what we need to reconnect
-    # self.settings["core_id"] = api.core_id
-    # self.settings["token"] = api.token
-    #
-    # # print("leaving authorize with settings: {self.settings}")
-    #
-    # print("Shutdown apis")
-    # for api in apis:
-    #     api.stop()
+    while len(auth_api) == 0:
+        print("Waiting for authorisation")
+        time.sleep(1)
+        auth_api = [api for api in apis if api.token is not None]
+
+    api = auth_api[0]
+
+    print("Got authorisation\n\t\thost ip: {}\
+                      \n\t\tcore name: {}\n\t\tcore id: {}\
+                      \n\t\ttoken: {}".format(api.host, api.core_name, api.core_id, api.token))
+    # This is what we need to reconnect
+    self.settings["core_id"] = api.core_id
+    self.settings["token"] = api.token
+
+    # print("leaving authorize with settings: {self.settings}")
+
+    print("Shutdown apis")
+    for api in apis:
+        api.stop()
 
 if __name__ == "__main__":
     authorize('info')

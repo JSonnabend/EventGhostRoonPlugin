@@ -239,6 +239,7 @@ class RoonApiWebSocket(
                 "MOO/1 REQUEST %s\nRequest-Id: %s\nContent-Length: %s\nContent-Type: %s\n\n%s"
                 % (command, request_id, len(body), content_type, body)
             )
-        msg = bytes(msg, "utf-8")
+        # msg = bytes(msg, "utf-8")
+        msg = str(msg)
         self._socket.send(msg, 0x2)
         return request_id
