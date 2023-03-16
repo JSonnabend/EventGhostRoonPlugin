@@ -23,6 +23,7 @@ help = '''\
 Roon plugin
 '''
 
+import eg
 eg.RegisterPlugin(
     name = 'Roon',
     author = 'Sonnabend',
@@ -41,7 +42,6 @@ import threading
 import time
 import re
 import roonapi
-import eg
 import wx
 import sys
 
@@ -162,6 +162,18 @@ class ToggleMuteAction(eg.ActionClass):
 
 class Roon(eg.PluginClass):
 
+    _appinfo = {
+        "extension_id": "sonnabend.roon.eventghostplugin",
+        "display_name": "Roon Eventghost Plugin",
+        "display_version": "0.1",
+        "publisher": "sonnabend",
+        "email": "",
+    }
+
+    @property
+    def appinfo(self):
+        return self._appinfo
+
     def __init__(self):
         group = self
         for cmd_name, cmd_text, cmd_cmd, cmd_rangespec in cmdList:
@@ -225,7 +237,39 @@ class Roon(eg.PluginClass):
 
     def authorize(self, event):
         print('in {} with event {}'.format(sys._getframe().f_code.co_name,event))
-        pass
+        import discovery
+        print("discovering servers")
+        discover = discovery.RoonDiscovery(None)
+        servers = discover.all()
+        print("discover: %s\nservers: %s" % (discover, servers))
+        #
+        # print("Shutdown discovery")
+        # discover.stop()
+        #
+        # print("Found the following servers")
+        # print(servers)
+        # apis = [roonapi.RoonApi(self._appinfo, None, server[0], server[1], False) for server in servers]
+        #
+        # auth_api = []
+        # while len(auth_api) == 0:
+        #     print("Waiting for authorisation")
+        #     time.sleep(1)
+        #     auth_api = [api for api in apis if api.token is not None]
+        #
+        # api = auth_api[0]
+        #
+        # print("Got authorisation\n\t\thost ip: {}\
+        #                   \n\t\tcore name: {}\n\t\tcore id: {}\
+        #                   \n\t\ttoken: {}".format(api.host, api.core_name, api.core_id, api.token))
+        # # This is what we need to reconnect
+        # self.settings["core_id"] = api.core_id
+        # self.settings["token"] = api.token
+        #
+        # # print("leaving authorize with settings: {self.settings}")
+        #
+        # print("Shutdown apis")
+        # for api in apis:
+        #     api.stop()
 
 
     def Configure(self, port=0):
@@ -270,3 +314,6 @@ class Roon(eg.PluginClass):
 
         while panel.Affirmed():
             panel.SetResult()
+
+
+

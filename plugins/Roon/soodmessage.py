@@ -19,13 +19,15 @@ SOOD\x02Q<1bytelen>query_service_id<2bytelen>00720724-5143-4a9b-abac-0e50cba674b
 Response format:
 SOOD\x02R<1bytelen>name<2bytelen><the_name><1bytelen>display_version<2bytelen><the_version><1bytelen>unique_id<2bytelen><the_id><1bytelen>service_id<twobytelen>00720724-5143-4a9b-abac-0e50cba674bb<1bytelen>tcp_port<twobytelen><the_port><1bytelen>http_port<twobytelen><the_port><1bytelen>_tid<twobytelen>c64e3888-f2f2-4c4a-9f89-2093ae4217a6
 """
+import re
 
-import enum
-from itertools import count
-def auto(it=count()):
-  return next(it)
-enum.auto = auto
-from enum import Enum, auto
+
+# import enum
+# from itertools import count
+# def auto(it=count()):
+#   return next(it)
+# enum.auto = auto
+# from enum import Enum, auto
 
 
 class FormatException(Exception):
@@ -42,11 +44,16 @@ class SOODMessage:  # pylint: disable=too-few-public-methods
 
     __MESSAGE_PREFIX__ = b"SOOD\x02"
 
-    class SOODMessageType(Enum):
+    class SOODMessageType:
         """Symbolic names for the message types."""
 
-        QUERY = auto()
-        RESPONSE = auto()
+        # QUERY = auto()
+        # RESPONSE = auto()
+        class QUERY:
+            pass
+
+        class RESPONSE:
+            pass
 
         def __repr__(self):
             """Print class and name."""
@@ -75,16 +82,40 @@ class SOODMessage:  # pylint: disable=too-few-public-methods
         self._current_position += len(part_string)
         return part_string
 
+    def _parse_message_properties(self, message):
+        print(message)
+        # message = message.replace('\x0f', '\x04')
+        servers = message.split('\x02')
+        server1 = servers[1]
+        serverprops = ''
+        # serverpropsclean = re.sub(r'[^\x00-\x7f]' ,'?', serverprops[1])
+        for s in server1:
+            if ord(s) < 127 and ord(s) > 31:
+                serverprops += s
+            else:
+                serverprops += '\x00'
+        serverprops = serverprops.replace('\x00\x00', '\x00').split('\x00')
+        serverprops.pop(0)
+        properties = {}
+        looprange = len(serverprops)/2
+        for x in range(looprange):
+            key = serverprops[2*x]
+            value = serverprops[2*x+1]
+            properties[key] = value
+        return properties
+
+
     def _parse_properties(self):
         properties = {}
-        while self._current_position < len(self._message):
-            part_key = self._parse_property(1)
-            if part_key is None:
-                return None
-            part_value = self._parse_property(2)
-            if part_value is None:
-                return None
-            properties[part_key] = part_value
+        properties = self._parse_message_properties(self._message)
+        # while self._current_position < len(self._message):
+        #     part_key = self._parse_property(1)
+        #     if part_key is None:
+        #         return None
+        #     part_value = self._parse_property(2)
+        #     if part_value is None:
+        #         return None
+        #     properties[part_key] = part_value
         return properties
 
     def _parse_type(self):

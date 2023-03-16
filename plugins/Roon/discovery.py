@@ -59,43 +59,44 @@ class RoonDiscovery(threading.Thread):
         msg = msg.encode()
         entries = []
 
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
-        try:		
-        	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        
-	        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
-	        sock.sendto(msg, (SOOD_MULTICAST_IP, SOOD_PORT))
-	        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-	        sock.sendto(msg, ("<broadcast>", SOOD_PORT))
-	        sock.settimeout(5)
-	        while not self._exit.isSet():
-	            try:
-	                data, server = sock.recvfrom(1024)
-	                message = SOODMessage(data).as_dictionary
-	
-	                host = server[0]
-	                port = message["properties"]["http_port"]
-	                unique_id = message["properties"]["unique_id"]
-	                print("Discovered %s", message)
-	
-	                if self._core_id is not None and self._core_id != unique_id:
-	                    print(
-	                        "Ignoring server with id %s, because we're looking for %s",
-	                        unique_id,
-	                        self._core_id,
-	                    )
-	                    continue
-	
-	                entries.append((host, port))
-	                if first_only:
-	                    # we're only interested in the first server found
-	                    break
-	            except socket.timeout:
-	                print("Timeout")
-	                break
-	            except FormatException as format_exception:
-	                print("Format exception %s", format_exception.message)
-	                break
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
+            sock.sendto(msg, (SOOD_MULTICAST_IP, SOOD_PORT))
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            sock.sendto(msg, ("<broadcast>", SOOD_PORT))
+            sock.settimeout(5)
+            while not self._exit.isSet():
+                try:
+                    data, server = sock.recvfrom(1024)
+                    print('data: ' + data)
+                    message = SOODMessage(data).as_dictionary
+                    print('here!')
+
+                    host = server[0]
+                    port = message["properties"]["http_port"]
+                    unique_id = message["properties"]["unique_id"]
+                    print("Discovered %s", message)
+
+                    if self._core_id is not None and self._core_id != unique_id:
+                        print(
+                            "Ignoring server with id %s, because we're looking for %s",
+                            unique_id,
+                            self._core_id,
+                        )
+                        continue
+
+                    entries.append((host, port))
+                    if first_only:
+                        # we're only interested in the first server found
+                        break
+                except socket.timeout:
+                    print("Timeout")
+                    break
+                except FormatException as format_exception:
+                    print("Format exception %s", format_exception.message)
+                    break
         finally:
-	    	sock.close()
+            sock.close()
         return entries
